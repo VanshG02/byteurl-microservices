@@ -1,22 +1,86 @@
-# 🚀 ByteURL — Distributed URL Shortener (Microservices + Docker + Redis + Gateway)
+# ByteURL — Distributed URL Shortener (Microservices + Docker + Redis + Gateway)
 
-
+## Overview
 A production-style **URL shortening system** built using **microservices**, **Docker Compose**, **Redis caching**, **MongoDB**, and an **Nginx API Gateway**, with a modern **React** dashboard.
 
 ---
 
-## 🏗 Project Overview
+## 🏗 Project Architecture
 
-ByteURL is composed of five core components working together to deliver a fast, scalable, secure URL management system.
-
-### 1️⃣ Dashboard (Frontend)  
+### 1. Dashboard (Frontend)  
 **Tech:** React, Vite, Axios  
 **Folder:** `/client`
+ 
+The dashboard is the primary interface for interacting with ByteURL. It allows users to:
+  - Register and log in
+  - Create short URLs with different link types (standard, expiring, one-time)
+  - View a table of all their URLs and click stats  
+  The app talks only to the **API Gateway** at `http://localhost:8080`, keeping the microservices hidden behind a single entrypoint.
 
-The dashboard provides:  
-- Login / Register  
-- URL Shortening UI  
-- URL history table  
-- Link expiration/ types (Standard / 7 days / 30 days / One-time)  
-- Analytics preview  
+### 2. Database
+- **Tech:** MongoDB, Redis
+- **Description:**
+  - MongoDB stores:
+    - User accounts
+    - URL metadata (long URL, short code, link type, expiry, click count)
+  - Redis is used for:
+    - Caching short code → long URL for ultra-fast redirects
+    - Rate limiting users on the /api/shorten endpoint
+  Both services run as containers via docker-compose, and are accessed by the Node.js microservices inside the same Docker network.
 
+### 3. API Gateway (Nginx)
+- **Tech:** MongoDB, Redis
+- **Folder:** `/nginx`
+- **Description:**
+  The API Gateway is the **single entrypoint** for the backend. It exposes one public host/port and then routes internally to the correct microservice. It also injects X-Request-ID headers for correlation-ID based logging
+
+### 4. Auth Service
+- **Function:** Authentication & User Management
+- **Tech:** Node.js, Express, JWT, MongoDB
+- **Folder:** `services/auth`
+- **Description:**
+  The Auth service is responsible for:
+  - Registering users
+  - Logging users in
+  - Issuing and validating JWT tokens
+  - Protecting downstream routes via requireAuth middleware
+ 
+
+### 5. Shortener Service
+- **Function:** URL Shortening, Link Logic & Redirects
+- **Tech:** Node.js, Express, MongoDB, Redis
+- **Folder:** `services/shortener/`
+- **Description:**
+  The Shortener service handles all URL-related logic:
+  - Creating short URLs for logged-in users
+  - Supporting different link types:
+    - Standard (no expiry)
+    - Temporary (7 days / 30 days)
+    - One-time (works once, then expires)
+  - Tracking clicks and enforcing expiry rules
+  - Using Redis as a cache for short code → long URL
+  - Implementing per-user rate limiting for `/api/shorten`
+  - Logging with correlation IDs to trace requests
+
+### 6. Client Interaction
+- **Description:**
+  The interaction between the user and the system flows through the following steps:
+  - **Authentiction**
+    - User opens the React dashboard.
+    - The dashboard calls the Gateway:
+      -  `POST /auth/register` to create an account.
+      -  `POST /auth/login` to obtain a JWT token.
+    - The JWT token is stored on the client and attached as
+      `Authorization: Bearer <token>` for future requests.
+  - **Creating a Short URL:**
+    - User pastes a long URL and selects a link type (standard, 7 days, 30 days, one-time). 
+    - Dashboard sends `POST /api/shorten` with the long URL and mode.
+    - Gateway routes this to the Shortener service.
+    - Shortener:
+      - Validates token via shared JWT secret.
+      - Computes expiry / max-click rules.
+      - Stores the entry in MongoDB.
+      - Caches the mapping in Redis.
+  - **Rate Limiting & Logging:**
+    - Each `/api/shorten` call goes through a Redis-based rate limiter (e.g., max 20 requests/min per user).
+    - Each request is tagged with a correlation ID (`X-Request-ID`) so logs from different services can be tied back to the same user action.

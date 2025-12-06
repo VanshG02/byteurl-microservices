@@ -1,213 +1,22 @@
-🚀 ByteURL — Distributed URL Shortening System
+# 🚀 ByteURL — Distributed URL Shortener (Microservices + Docker + Redis + Gateway)
 
-ByteURL is a distributed, production-style URL Shortener Platform built using a microservices architecture, complete with an API Gateway, dedicated Auth service, Shortener service, Redis caching, and MongoDB storage.
-The system demonstrates key backend engineering concepts such as request correlation IDs, centralized routing, rate limiting, and fault-tolerant distributed design.
 
+A production-style **URL shortening system** built using **microservices**, **Docker Compose**, **Redis caching**, **MongoDB**, and an **Nginx API Gateway**, with a modern **React** dashboard.
 
-🏗 Project Architecture Overview
+---
 
-ByteURL consists of 5 core components:
+## 🏗 Project Overview
 
-Frontend Client (React + Vite)
+ByteURL is composed of five core components working together to deliver a fast, scalable, secure URL management system.
 
-Auth Microservice (Node.js, Express, JWT)
+### 1️⃣ Dashboard (Frontend)  
+**Tech:** React, Vite, Axios  
+**Folder:** `/client`
 
-Shortener Microservice (Node.js, Redis, MongoDB)
+The dashboard provides:  
+- Login / Register  
+- URL Shortening UI  
+- URL history table  
+- Link expiration/ types (Standard / 7 days / 30 days / One-time)  
+- Analytics preview  
 
-Nginx API Gateway
-
-Database Layer (MongoDB + Redis)
-
-These components interact through a unified Docker Compose environment.
-
-1️⃣ Dashboard (Frontend Client)
-
-Tech: React, Vite, Axios
-Path: /client
-
-A clean UI built in React that provides:
-
-User authentication (login/register)
-
-URL creation interface
-
-Short link analytics and history table
-
-Redirect tracking
-
-Interaction through the API Gateway only (http://localhost:8080)
-
-Commands to Run:
-
-cd client
-npm install
-npm run dev
-
-2️⃣ Auth Service
-
-Tech: Node.js, Express, MongoDB, JWT
-Path: /services/auth
-
-Responsible for authentication and user identity:
-
-Register
-
-Login
-
-Session validation (/auth/me)
-
-JWT token creation + verification middleware
-
-Correlation ID logging for every request
-
-Commands:
-
-cd services/auth
-npm install
-npm run dev
-
-3️⃣ Shortener Service
-
-Tech: Node.js, Express, MongoDB, Redis
-Path: /services/shortener
-
-Handles all core URL logic:
-
-Short link creation
-
-Link expiry (7-day, 30-day, one-time)
-
-Click tracking
-
-Redis-based redirect caching (fast lookups)
-
-Redis-based rate limiting
-
-Correlation ID request logging
-
-Redirect service at /:code
-
-Commands:
-
-cd services/shortener
-npm install
-npm run dev
-
-4️⃣ API Gateway (Nginx)
-
-Tech: Nginx
-Path: /nginx/nginx.conf
-
-Central routing engine:
-
-Path	Routed To
-/auth/*	Auth Microservice
-/api/*	Shortener Microservice
-/:code	Redirect Handler
-
-Responsibilities:
-
-Reverse proxy
-
-Header injection (X-Request-Id)
-
-CORS handling
-
-Easy scaling & isolation
-
-5️⃣ Databases
-MongoDB
-
-Stores:
-
-Users
-
-URL metadata
-
-Expiry timestamps
-
-Click tracking
-
-Redis
-
-Used for:
-
-Cached redirects
-
-Rate limiting counters
-
-Temporary flags (e.g., one-time link usage)
-
-Both run in Docker containers in the local environment.
-
-6️⃣ Client Interaction Flow
-
-Here’s how the system behaves when a user interacts:
-
-A. Creating a Short URL
-
-User → React UI → POST /api/shorten
-
-Nginx Gateway routes to Shortener Service
-
-Shortener validates token using Auth Service
-
-Short link generated & stored in MongoDB
-
-Cached in Redis for faster access
-
-B. Visiting a Short URL
-
-User hits: http://localhost:8080/abc123
-
-Nginx passes request to Shortener
-
-Shortener checks Redis → returns original URL immediately
-
-If not cached → check MongoDB → store in Redis → redirect
-
-C. Rate Limiting
-
-Each user: 20 shorten requests/minute
-
-Enforced through Redis counters
-
-flowchart TD
-
-subgraph CLIENT[Frontend Client (React)]
-A1[User Interface]
-end
-
-subgraph GATEWAY[Nginx API Gateway]
-G1[/auth/* → Auth Service/]
-G2[/api/* → Shortener Service/]
-G3[/:code → Redirect Handler]
-end
-
-subgraph AUTH[Auth Service]
-AU1[Register]
-AU2[Login]
-AU3[Validate Token]
-end
-
-subgraph SHORTENER[Shortener Service]
-S1[Shorten URL]
-S2[Redirect Handler]
-S3[Expiry Logic]
-S4[Rate Limiting]
-end
-
-subgraph DB[(Databases)]
-M1[(MongoDB)]
-R1[(Redis)]
-end
-
-CLIENT -->|HTTP Requests| GATEWAY
-
-GATEWAY -->|/auth| AUTH
-GATEWAY -->|/api| SHORTENER
-GATEWAY -->|/:code| SHORTENER
-
-AUTH --> M1
-SHORTENER --> M1
-SHORTENER --> R1

@@ -1,0 +1,55 @@
+// src/pages/RegisterPage.jsx
+import { useContext, useState } from "react";
+import { AuthContext } from "../context/AuthContext";
+import { useNavigate, Link } from "react-router-dom";
+
+export default function RegisterPage() {
+  const { register } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const [email, setEmail] = useState("newuser@example.com");
+  const [password, setPassword] = useState("password123");
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    try {
+      await register(email, password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.response?.data?.error || "Registration failed");
+    }
+  }
+
+ return (
+  <div className="page-center">
+    <div className="card auth-card">
+      <h2>Register for ByteURL</h2>
+      <form onSubmit={handleSubmit}>
+        <div className="input-group">
+          <label>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <div className="input-group">
+          <label>Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        {error && <p className="error-text">{error}</p>}
+        <button type="submit">Register</button>
+      </form>
+      <p className="muted" style={{ marginTop: 16 }}>
+        Already have an account? <Link to="/login">Login</Link>
+      </p>
+    </div>
+  </div>
+);
+}

@@ -84,3 +84,8 @@ The dashboard is the primary interface for interacting with ByteURL. It allows u
   - **Rate Limiting & Logging:**
     - Each `/api/shorten` call goes through a Redis-based rate limiter (e.g., max 20 requests/min per user).
     - Each request is tagged with a correlation ID (`X-Request-ID`) so logs from different services can be tied back to the same user action.
+
+## Snippets
+
+<img width="908" height="420" alt="ByteURL login page" src="https://github.com/user-attachments/assets/b38cc4e6-33d6-4ff1-ae32-89cba4d32906" />
+<img width="908" height="420" alt="ByteURL dash" src="https://github.com/user-attachments/assets/961b074f-e6f1-40cb-b3c9-3e6d5d780030" />
